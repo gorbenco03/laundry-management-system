@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Layout from '../components/common/Layout';
 import Dashboard from '../components/admin/Dashboard';
 import OrdersList from '../components/admin/OrdersList';
+import Reports from '../components/admin/Reports';
 
 const AdminDashboard: React.FC = () => {
   return (
@@ -19,11 +20,7 @@ const AdminDashboard: React.FC = () => {
       } />
       <Route path="/reports" element={
         <Layout title="Rapoarte">
-          <div className="p-6">
-            <div className="max-w-7xl mx-auto">
-              <p className="text-gray-500">Rapoarte detaliate vor fi aici</p>
-            </div>
-          </div>
+          <Reports />
         </Layout>
       } />
       <Route path="/employees" element={
