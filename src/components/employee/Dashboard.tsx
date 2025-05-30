@@ -11,72 +11,26 @@ import { Link } from 'react-router-dom';
 import { Order, OrderStatus } from '../../types';
 import { formatDate, formatPrice } from '../../utils/helpers';
 import { STATUS_LABELS } from '../../utils/constants';
-
-// Date simulate pentru dezvoltare
-const mockOrders: Order[] = [
-  {
-    id: 'CMD-2024-0001',
-    customer: { name: 'Ion Popescu', phone: '0721234567', email: 'ion@example.com' },
-    items: [
-      { id: 'CMD-2024-0001-A1', serviceCode: 'PERNA_50x50_CAT1', serviceName: 'Pernă 50×50', quantity: 2, price: 95, qrCode: '', isReady: true },
-      { id: 'CMD-2024-0001-A2', serviceCode: 'CAMASA_BARBAT', serviceName: 'Cămașă bărbat', quantity: 3, price: 80, qrCode: '', isReady: false }
-    ],
-    totalPrice: 430,
-    status: OrderStatus.IN_PROGRESS,
-    createdAt: new Date('2024-05-28T10:00:00'),
-    updatedAt: new Date('2024-05-28T14:30:00')
-  },
-  {
-    id: 'CMD-2024-0002',
-    customer: { name: 'Maria Ionescu', phone: '0731234567' },
-    items: [
-      { id: 'CMD-2024-0002-A1', serviceCode: 'ROCHIE_SIMPLA', serviceName: 'Rochie simplă', quantity: 1, price: 120, qrCode: '', isReady: true }
-    ],
-    totalPrice: 120,
-    status: OrderStatus.READY,
-    createdAt: new Date('2024-05-28T09:00:00'),
-    updatedAt: new Date('2024-05-28T13:00:00')
-  },
-  {
-    id: 'CMD-2024-0003',
-    customer: { name: 'Andrei Popa', phone: '0741234567' },
-    items: [
-      { id: 'CMD-2024-0003-A1', serviceCode: 'COSTUM_2_PIESE_BARBAT', serviceName: 'Costum 2 piese', quantity: 1, price: 200, qrCode: '', isReady: false }
-    ],
-    totalPrice: 200,
-    status: OrderStatus.REGISTERED,
-    createdAt: new Date('2024-05-28T15:00:00'),
-    updatedAt: new Date('2024-05-28T15:00:00')
-  }
-];
+import { useOrderStatistics, useOrders } from '../../hooks/useOrders'; // Importăm hook-urile
 
 const Dashboard: React.FC = () => {
-  // Calculează statistici
-  const stats = {
-    todayOrders: mockOrders.filter(order => {
-      const today = new Date();
-      const orderDate = new Date(order.createdAt);
-      return orderDate.toDateString() === today.toDateString();
-    }).length,
-    activeOrders: mockOrders.filter(order => 
-      order.status === OrderStatus.REGISTERED || order.status === OrderStatus.IN_PROGRESS
-    ).length,
-    readyForPickup: mockOrders.filter(order => order.status === OrderStatus.READY).length,
-    todayRevenue: mockOrders
-      .filter(order => {
-        const today = new Date();
-        const orderDate = new Date(order.createdAt);
-        return orderDate.toDateString() === today.toDateString();
-      })
-      .reduce((sum, order) => sum + order.totalPrice, 0)
-  };
+  // Folosim hook-ul pentru statistici
+  const { statistics, loading: statsLoading, error: statsError, refetch: refetchStats } = useOrderStatistics();
 
+  // Folosim hook-ul pentru comenzi recente (ultimele 10 comenzi)
+  const { orders, loading: ordersLoading, error: ordersError, refetch: refetchOrders } = useOrders({
+    limit: 10, // Limităm la 10 comenzi recente
+    page: 1
+  });
+
+  // Funcție pentru badge-ul de status
   const getStatusBadge = (status: OrderStatus) => {
     const config = {
       [OrderStatus.REGISTERED]: { color: 'blue', icon: Clock },
       [OrderStatus.IN_PROGRESS]: { color: 'yellow', icon: Clock },
       [OrderStatus.READY]: { color: 'green', icon: CheckCircle },
-      [OrderStatus.DELIVERED]: { color: 'gray', icon: CheckCircle }
+      [OrderStatus.DELIVERED]: { color: 'gray', icon: CheckCircle },
+
     };
 
     const { color, icon: Icon } = config[status];
@@ -84,7 +38,8 @@ const Dashboard: React.FC = () => {
       blue: 'bg-blue-100 text-blue-800',
       yellow: 'bg-yellow-100 text-yellow-800',
       green: 'bg-green-100 text-green-800',
-      gray: 'bg-gray-100 text-gray-800'
+      gray: 'bg-gray-100 text-gray-800',
+      red: 'bg-red-100 text-red-800'
     };
 
     return (
@@ -95,11 +50,28 @@ const Dashboard: React.FC = () => {
     );
   };
 
+  // Funcție pentru statusul articolelor
   const getItemsStatus = (items: any[]) => {
     const ready = items.filter(item => item.isReady).length;
     const total = items.length;
     return `${ready}/${total}`;
   };
+
+  // Gestionăm starea de încărcare și erorile
+  if (statsLoading || ordersLoading) {
+    return <div className="p-6">Se încarcă...</div>;
+  }
+
+  if (statsError || ordersError) {
+    return (
+      <div className="p-6 text-red-500">
+        Eroare: {statsError || ordersError}
+        <button onClick={() => { refetchStats(); refetchOrders(); }} className="ml-2 text-blue-600">
+          Reîncearcă
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -114,7 +86,7 @@ const Dashboard: React.FC = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Comenzi Azi</dt>
-                  <dd className="text-2xl font-semibold text-gray-900">{stats.todayOrders}</dd>
+                  <dd className="text-2xl font-semibold text-gray-900">{statistics.todayOrders}</dd>
                 </dl>
               </div>
             </div>
@@ -130,7 +102,7 @@ const Dashboard: React.FC = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Active</dt>
-                  <dd className="text-2xl font-semibold text-gray-900">{stats.activeOrders}</dd>
+                  <dd className="text-2xl font-semibold text-gray-900">{statistics.activeOrders}</dd>
                 </dl>
               </div>
             </div>
@@ -146,7 +118,7 @@ const Dashboard: React.FC = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Gata pentru ridicare</dt>
-                  <dd className="text-2xl font-semibold text-gray-900">{stats.readyForPickup}</dd>
+                  <dd className="text-2xl font-semibold text-gray-900">{statistics.readyOrders}</dd>
                 </dl>
               </div>
             </div>
@@ -162,7 +134,7 @@ const Dashboard: React.FC = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Venituri Azi</dt>
-                  <dd className="text-2xl font-semibold text-gray-900">{formatPrice(stats.todayRevenue)}</dd>
+                  <dd className="text-2xl font-semibold text-gray-900">{formatPrice(statistics.todayRevenue)}</dd>
                 </dl>
               </div>
             </div>
@@ -249,7 +221,7 @@ const Dashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {mockOrders.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {order.id}

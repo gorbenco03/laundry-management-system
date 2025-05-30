@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import LoadingSpinner from './components/common/LoadingSpinner';
 import { UserRole } from './types';
 
 // Componentă pentru rutele protejate
@@ -13,7 +14,12 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
+
+  // Afișează loading în timpul verificării autentificării
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Se verifică autentificarea..." />;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -33,7 +39,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 
 // Componentă wrapper pentru Router
 const AppContent: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
+
+  // Afișează loading în timpul verificării inițiale
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Se încarcă aplicația..." />;
+  }
 
   return (
     <Routes>
@@ -89,6 +100,12 @@ const AppContent: React.FC = () => {
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
               <p className="text-gray-600">Pagina nu a fost găsită</p>
+              <button
+                onClick={() => window.history.back()}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Înapoi
+              </button>
             </div>
           </div>
         } 
